@@ -1,0 +1,62 @@
+version: '3'
+services:
+  cdr_web:
+    build: ./cdr_web
+    image: cdr_web
+    depends_on:
+      - "cdr_db"
+    hostname: "sf3"
+    container_name: "cdr_web"
+    ports:
+      - 8100:80   #apache
+    volumes:
+      - "../:/var/www/html"
+      - "~/.composer:/var/www/.composer"
+      - ./cdr_web/zshrc.dist:/var/www/.zshrc:ro
+      - ./data/apache/logs:/var/log/apache2
+    links:
+      - cdr_db
+    env_file:
+      - docker-env
+    networks:
+      - cdr_net
+
+  #mysql
+  cdr_db:
+    image: mariadb:10.3
+    container_name: "cdr_db"
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: cdr_compare
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: docker
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ./data/sql:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/conf.d/z_my.cnf
+    networks:
+      - cdr_net
+
+  #phpmyadmin
+  cdr_pma:
+    image: phpmyadmin/phpmyadmin
+    container_name: "cdr_pma"
+    links:
+      - cdr_db
+    depends_on:
+      - "cdr_db"
+    ports:
+      - 8081:80
+    #        restart: always
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_PORT=3306
+      - PMA_HOST=cdr_db
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+    networks:
+      - cdr_net
+
+networks:
+  cdr_net:
